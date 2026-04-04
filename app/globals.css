@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/* ── Defray design tokens — Light theme (default) ──────────────── */
+@theme inline {
+  /* Semantic colour tokens (resolved from CSS vars below) */
+  --color-bg:       var(--bg);
+  --color-surface:  var(--surface);
+  --color-surface2: var(--surface2);
+  --color-surface3: var(--surface3);
+  --color-accent:   var(--accent);
+  --color-gold:     var(--gold);
+  --color-green:    var(--green);
+  --color-red:      var(--red);
+  --color-text:     var(--text);
+  --color-text2:    var(--text2);
+  --color-text3:    var(--text3);
+  --color-border:   var(--border);
+
+  /* Typography */
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ── Light palette ─────────────────────────────────────────────── */
+:root {
+  --bg:       #f7f6f3;
+  --surface:  #ffffff;
+  --surface2: #f0ede8;
+  --surface3: #e5e1da;
+  --accent:   #6d28d9;
+  --gold:     #d97706;
+  --green:    #059669;
+  --red:      #dc2626;
+  --text:     #1a1714;
+  --text2:    rgba(26, 23, 20, 0.58);
+  --text3:    rgba(26, 23, 20, 0.35);
+  --border:   rgba(26, 23, 20, 0.1);
+}
+
+/* ── Dark palette ──────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:       #0f0e13;
+    --surface:  #191720;
+    --surface2: #211f2b;
+    --surface3: #2b2937;
+    --accent:   #7c3aed;
+    --gold:     #f59e0b;
+    --green:    #10b981;
+    --red:      #f87171;
+    --text:     #ede9fe;
+    --text2:    rgba(237, 233, 254, 0.58);
+    --text3:    rgba(237, 233, 254, 0.35);
+    --border:   rgba(237, 233, 254, 0.09);
+  }
+}
+
+/* ── Base ──────────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+  color-scheme: light dark;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface3);
+  border-radius: 3px;
+}
+
+/* ── Selection ─────────────────────────────────────────────────── */
+::selection {
+  background: rgba(109, 40, 217, 0.2);
+  color: var(--text);
+}
