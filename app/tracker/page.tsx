@@ -70,41 +70,135 @@ const STATUS_LABEL: Record<TrackerItem["status"], string> = {
   waiting: "Waiting",
 };
 
-const STATUS_COLOR: Record<TrackerItem["status"], string> = {
-  done: "bg-green/10 text-green border-green/20",
-  "in-progress": "bg-accent/10 text-accent border-accent/20",
-  todo: "bg-surface3 text-text2 border-border",
-  blocked: "bg-red/10 text-red border-red/20",
-  waiting: "bg-gold/10 text-gold border-gold/20",
+// Badge classes — matches the HTML tracker colour system exactly
+const STATUS_BADGE: Record<TrackerItem["status"], string> = {
+  done:          "bg-green/10 text-green border border-green/20",
+  "in-progress": "bg-accent/10 text-accent border border-accent/20",
+  todo:          "bg-surface3 text-text3 border border-border",
+  blocked:       "bg-red/10 text-red border border-red/20",
+  waiting:       "bg-gold/10 text-gold border border-gold/20",
 };
 
+// Priority dot colour
 const PRIORITY_DOT: Record<string, string> = {
   critical: "bg-red",
-  high: "bg-gold",
-  medium: "bg-accent",
-  low: "bg-text3",
+  high:     "bg-gold",
+  medium:   "bg-accent",
+  low:      "bg-text3",
 };
 
-function SectionProgress({ items }: { items: TrackerItem[] }) {
-  const total = items.length;
-  const done = items.filter((i) => i.status === "done").length;
-  const inProgress = items.filter((i) => i.status === "in-progress").length;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+// Priority chip classes
+const PRIORITY_CHIP: Record<string, string> = {
+  critical: "bg-red/10 text-red",
+  high:     "bg-gold/10 text-gold",
+  medium:   "bg-accent/10 text-accent",
+  low:      "bg-surface3 text-text3",
+};
 
+const PRIORITY_LABEL: Record<string, string> = {
+  critical: "🔴 Critical",
+  high:     "🟠 High",
+  medium:   "🟡 Medium",
+  low:      "🟢 Low",
+};
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function ProgressBar({ items }: { items: TrackerItem[] }) {
+  const total = items.length;
+  const done  = items.filter((i) => i.status === "done").length;
+  const active = items.filter((i) => i.status === "in-progress").length;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
   return (
-    <div className="flex items-center gap-3 mt-1">
-      <div className="flex-1 h-1.5 bg-surface3 rounded-full overflow-hidden">
+    <div className="mt-3">
+      <div className="h-0.75 bg-surface3 rounded-full overflow-hidden">
         <div
-          className="h-full bg-accent rounded-full transition-all"
-          style={{ width: `${pct}%` }}
+          className="h-full rounded-full transition-all"
+          style={{
+            width: `${pct}%`,
+            background: "linear-gradient(90deg, var(--accent), var(--green))",
+          }}
         />
       </div>
-      <span className="text-xs text-text3 shrink-0">
-        {done}/{total}
-        {inProgress > 0 && (
-          <span className="text-accent ml-1">+{inProgress}</span>
+      <div className="flex gap-3 mt-1.5 flex-wrap">
+        <span className="text-xs text-text3">
+          <span className="text-text font-medium">{pct}%</span> complete
+        </span>
+        <span className="text-xs text-text3">
+          <span className="text-green font-medium">{done}</span> done
+        </span>
+        {active > 0 && (
+          <span className="text-xs text-text3">
+            <span className="text-accent font-medium">{active}</span> in progress
+          </span>
         )}
-      </span>
+      </div>
+    </div>
+  );
+}
+
+function TaskRow({ item }: { item: TrackerItem }) {
+  const isDone = item.status === "done";
+  return (
+    <li className={`flex items-start gap-3 py-2 px-3 rounded-lg border transition-colors ${
+      isDone
+        ? "border-transparent bg-transparent opacity-50"
+        : "border-border bg-surface2 hover:border-border hover:bg-surface3"
+    }`}>
+      {/* Priority dot */}
+      <span
+        className={`mt-1.75 w-1.5 h-1.5 rounded-full shrink-0 ${
+          item.priority ? PRIORITY_DOT[item.priority] : "bg-transparent"
+        }`}
+      />
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span className={`text-sm leading-snug ${isDone ? "line-through text-text3" : "text-text"}`}>
+            {item.name}
+          </span>
+          <span className={`text-xs px-2 py-0.5 rounded-md font-medium shrink-0 ${STATUS_BADGE[item.status]}`}>
+            {STATUS_LABEL[item.status]}
+          </span>
+        </div>
+
+        {item.note && (
+          <p className="text-xs text-text3 mt-0.5 leading-relaxed">{item.note}</p>
+        )}
+
+        {/* Meta row: priority chip + due date */}
+        {(item.priority || item.due) && (
+          <div className="flex gap-1.5 mt-1.5 flex-wrap items-center">
+            {item.priority && (
+              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${PRIORITY_CHIP[item.priority]}`}>
+                {PRIORITY_LABEL[item.priority]}
+              </span>
+            )}
+            {item.due && (
+              <span className="text-[10px] text-gold font-mono">
+                Due {item.due}{item.recurring ? ` · every ${item.recurring}` : ""}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function SectionCard({ section }: { section: TrackerSection }) {
+  return (
+    <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+      <div className="px-5 pt-5 pb-4 border-b border-border">
+        <h3 className="font-semibold text-base">{section.title}</h3>
+        <ProgressBar items={section.items} />
+      </div>
+      <ul className="p-3 space-y-1.5">
+        {section.items.map((item) => (
+          <TaskRow key={item.id} item={item} />
+        ))}
+      </ul>
     </div>
   );
 }
@@ -114,80 +208,83 @@ function SectionProgress({ items }: { items: TrackerItem[] }) {
 export default async function TrackerPage() {
   const data = await getTrackerData();
 
-  // Group sections by pathway
+  const allItems  = data?.sections.flatMap((s) => s.items) ?? [];
+  const total     = allItems.length;
+  const done      = allItems.filter((i) => i.status === "done").length;
+  const inProg    = allItems.filter((i) => i.status === "in-progress").length;
+  const waiting   = allItems.filter((i) => i.status === "waiting").length;
+  const blocked   = allItems.filter((i) => i.status === "blocked").length;
+  const overallPct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  // Ordered pathways: app first, maintenance last
+  const pathwayOrder = ["app", "maintenance"];
   const pathways = data
-    ? Array.from(new Set(data.sections.map((s) => s.pathway)))
+    ? pathwayOrder.filter((p) => data.sections.some((s) => s.pathway === p))
     : [];
 
-  const totalTasks = data?.sections.flatMap((s) => s.items).length ?? 0;
-  const doneTasks =
-    data?.sections
-      .flatMap((s) => s.items)
-      .filter((i) => i.status === "done").length ?? 0;
-  const inProgressTasks =
-    data?.sections
-      .flatMap((s) => s.items)
-      .filter((i) => i.status === "in-progress").length ?? 0;
-  const blockedTasks =
-    data?.sections
-      .flatMap((s) => s.items)
-      .filter((i) => i.status === "blocked").length ?? 0;
+  const PATHWAY_LABEL: Record<string, string> = {
+    app:         "App development",
+    maintenance: "Maintenance",
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
       {/* Nav */}
       <nav className="border-b border-border sticky top-0 bg-bg/90 backdrop-blur z-50">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
-            Defray<span className="text-accent">.</span>
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+          <Link href="/" className="text-base font-semibold tracking-tight flex items-center gap-2.5">
+            <span className="w-7 h-7 bg-accent rounded-lg flex items-center justify-center text-white text-sm font-bold shrink-0">
+              D
+            </span>
+            Defray
+            <span className="text-text3 font-normal text-sm">build tracker</span>
           </Link>
           <Link
             href="/"
             className="text-sm text-text2 hover:text-text transition-colors"
           >
-            ← Home
+            &larr; Home
           </Link>
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto w-full px-6 py-12 flex-1">
-        {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold mb-2">Build tracker</h1>
-          <p className="text-text2 mb-6">
-            Everything we&apos;re building — publicly tracked. Last updated:{" "}
-            <span className="text-text">{data?.meta.lastUpdated ?? "—"}</span>
-            {data?.meta.version && (
-              <>
-                {" "}
-                &middot; v
-                <span className="text-text">{data.meta.version}</span>
-              </>
-            )}
+      <div className="max-w-6xl mx-auto w-full px-6 py-10 flex-1">
+
+        {/* Header + overall stats */}
+        <div className="mb-8">
+          <p className="text-xs font-semibold uppercase tracking-widest text-text3 mb-3">
+            Overall progress &mdash; last updated {data?.meta.lastUpdated ?? "—"}
           </p>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {/* Stat pills */}
+          <div className="flex flex-wrap gap-2.5 mb-3">
             {[
-              { label: "Total tasks", value: totalTasks, color: "text-text" },
-              { label: "Done", value: doneTasks, color: "text-green" },
-              {
-                label: "In progress",
-                value: inProgressTasks,
-                color: "text-accent",
-              },
-              { label: "Blocked", value: blockedTasks, color: "text-red" },
-            ].map((stat) => (
+              { n: total,   label: "total tasks",  color: "" },
+              { n: done,    label: "done",         color: "text-green" },
+              { n: inProg,  label: "in progress",  color: "text-accent" },
+              { n: waiting, label: "waiting",      color: "text-gold" },
+              { n: blocked, label: "blocked",      color: "text-red" },
+              { n: `${overallPct}%`, label: "complete", color: "" },
+            ].map((s) => (
               <div
-                key={stat.label}
-                className="bg-surface border border-border rounded-xl p-4"
+                key={s.label}
+                className="bg-surface border border-border rounded-full px-4 py-1.5 flex items-center gap-1.5"
               >
-                <div className={`text-2xl font-bold ${stat.color}`}>
-                  {stat.value}
-                </div>
-                <div className="text-xs text-text3 mt-0.5">{stat.label}</div>
+                <span className={`text-sm font-semibold ${s.color || "text-text"}`}>{s.n}</span>
+                <span className="text-sm text-text3">{s.label}</span>
               </div>
             ))}
+          </div>
+
+          {/* Overall progress bar */}
+          <div className="h-0.75 bg-surface3 rounded-full overflow-hidden max-w-full">
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${overallPct}%`,
+                background: "linear-gradient(90deg, var(--accent), var(--green))",
+              }}
+            />
           </div>
         </div>
 
@@ -200,82 +297,74 @@ export default async function TrackerPage() {
           </div>
         )}
 
-        {/* Sections by pathway */}
+        {/* Pathways */}
         {data &&
           pathways.map((pathway) => {
-            const sections = data.sections.filter(
-              (s) => s.pathway === pathway
-            );
+            const pwSections = data.sections.filter((s) => s.pathway === pathway);
+            const pwItems    = pwSections.flatMap((s) => s.items);
+            const pwDone     = pwItems.filter((i) => i.status === "done").length;
+            const pwPct      = pwItems.length > 0
+              ? Math.round((pwDone / pwItems.length) * 100)
+              : 0;
+
             return (
               <div key={pathway} className="mb-12">
-                <h2 className="text-xs font-semibold uppercase tracking-widest text-text3 mb-5">
-                  {pathway === "biz"
-                    ? "Business"
-                    : pathway === "app"
-                    ? "App"
-                    : pathway === "maintenance"
-                    ? "Maintenance"
-                    : pathway}
-                </h2>
-
-                <div className="grid sm:grid-cols-2 gap-5">
-                  {sections.map((section) => (
+                {/* Pathway header card */}
+                <div className="bg-surface border border-border rounded-2xl p-5 mb-5">
+                  <div className={`text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded inline-block mb-2 ${
+                    pathway === "maintenance"
+                      ? "bg-gold/10 text-gold"
+                      : "bg-accent/10 text-accent"
+                  }`}>
+                    {pathway === "app" ? "Pathway — App" : "Pathway — Maintenance"}
+                  </div>
+                  <h2 className="text-lg font-bold mb-1">{PATHWAY_LABEL[pathway]}</h2>
+                  <p className="text-sm text-text2 mb-3">
+                    {pathway === "app"
+                      ? "Supabase · Expo / React Native · Auth · Groups · Virtual card · Launch"
+                      : "Credential rotation · Dependency audits · Security patches"}
+                  </p>
+                  <div className="h-0.75 bg-surface3 rounded-full overflow-hidden">
                     <div
-                      key={section.id}
-                      className="bg-surface border border-border rounded-2xl p-5"
-                    >
-                      <div className="mb-3">
-                        <h3 className="font-semibold">{section.title}</h3>
-                        <SectionProgress items={section.items} />
-                      </div>
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${pwPct}%`,
+                        background: pathway === "maintenance"
+                          ? "var(--gold)"
+                          : "linear-gradient(90deg, var(--accent), var(--green))",
+                      }}
+                    />
+                  </div>
+                  <div className="flex gap-4 mt-2 flex-wrap">
+                    <span className="text-xs text-text3">
+                      <span className="text-text font-medium">{pwPct}%</span> complete
+                    </span>
+                    <span className="text-xs text-text3">
+                      <span className="text-green font-medium">{pwDone}</span> done
+                    </span>
+                    {pwItems.filter((i) => i.status === "in-progress").length > 0 && (
+                      <span className="text-xs text-text3">
+                        <span className="text-accent font-medium">
+                          {pwItems.filter((i) => i.status === "in-progress").length}
+                        </span>{" "}
+                        in progress
+                      </span>
+                    )}
+                    {pwItems.filter((i) => i.status === "blocked").length > 0 && (
+                      <span className="text-xs text-text3">
+                        <span className="text-red font-medium">
+                          {pwItems.filter((i) => i.status === "blocked").length}
+                        </span>{" "}
+                        blocked
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-                      <ul className="space-y-2">
-                        {section.items.map((item) => (
-                          <li key={item.id} className="flex items-start gap-3">
-                            {/* Priority dot */}
-                            <span
-                              className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${
-                                item.priority
-                                  ? PRIORITY_DOT[item.priority]
-                                  : "bg-transparent"
-                              }`}
-                            />
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2 flex-wrap">
-                                <span
-                                  className={`text-sm ${
-                                    item.status === "done"
-                                      ? "text-text3 line-through"
-                                      : "text-text"
-                                  }`}
-                                >
-                                  {item.name}
-                                </span>
-                                <span
-                                  className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${
-                                    STATUS_COLOR[item.status]
-                                  }`}
-                                >
-                                  {STATUS_LABEL[item.status]}
-                                </span>
-                              </div>
-                              {item.note && (
-                                <p className="text-xs text-text3 mt-0.5 leading-relaxed">
-                                  {item.note}
-                                </p>
-                              )}
-                              {item.due && (
-                                <p className="text-xs text-gold mt-0.5">
-                                  Due {item.due}
-                                  {item.recurring && ` · every ${item.recurring}`}
-                                </p>
-                              )}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                {/* Section cards grid */}
+                <div className="grid sm:grid-cols-2 gap-5">
+                  {pwSections.map((section) => (
+                    <SectionCard key={section.id} section={section} />
                   ))}
                 </div>
               </div>
@@ -285,8 +374,8 @@ export default async function TrackerPage() {
 
       {/* Footer */}
       <footer className="border-t border-border">
-        <div className="max-w-5xl mx-auto px-6 py-8 text-sm text-text3 text-center">
-          &copy; 2026 Defray. This tracker updates automatically on each release.
+        <div className="max-w-6xl mx-auto px-6 py-6 text-sm text-text3 text-center">
+          &copy; 2026 Defray &middot; This tracker updates automatically on each release &middot; v{data?.meta.version ?? "—"}
         </div>
       </footer>
     </div>
