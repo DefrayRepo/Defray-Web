@@ -7,25 +7,22 @@ export const metadata: Metadata = {
     "Defray's public development tracker. See what's shipped, what's in progress, and what's coming next.",
 };
 
-// Revalidate every hour — tracker-data.json updates on each npm run ship
+// Revalidate every hour
 export const revalidate = 3600;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface TrackerItem {
   id: string;
-  name: string;
-  note?: string;
   status: "done" | "in-progress" | "todo" | "blocked" | "waiting";
-  due?: string;
-  priority?: "critical" | "high" | "medium" | "low";
-  recurring?: string;
 }
 
 interface TrackerSection {
   id: string;
   pathway: string;
   title: string;
+  publicLabel?: string;
+  publicDescription?: string;
   items: TrackerItem[];
 }
 
@@ -62,143 +59,114 @@ async function getTrackerData(): Promise<TrackerData | null> {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const STATUS_LABEL: Record<TrackerItem["status"], string> = {
-  done: "Done",
-  "in-progress": "In progress",
-  todo: "To do",
-  blocked: "Blocked",
-  waiting: "Waiting",
+const SECTION_ICON: Record<string, string> = {
+  "a-infra":    "⚙️",
+  "a-db":       "🗄️",
+  "a-auth":     "🔑",
+  "a-security": "🛡️",
+  "a-groups":   "👥",
+  "a-card":     "💳",
+  "a-feat":     "✨",
+  "a-brand":    "🎨",
+  "a-launch":   "🚀",
 };
 
-// Badge classes — matches the HTML tracker colour system exactly
-const STATUS_BADGE: Record<TrackerItem["status"], string> = {
-  done:          "bg-green/10 text-green border border-green/20",
-  "in-progress": "bg-accent/10 text-accent border border-accent/20",
-  todo:          "bg-surface3 text-text3 border border-border",
-  blocked:       "bg-red/10 text-red border border-red/20",
-  waiting:       "bg-gold/10 text-gold border border-gold/20",
-};
+function getSectionPhase(items: TrackerItem[]): {
+  label: string;
+  style: string;
+  dot: string;
+} {
+  const total  = items.length;
+  const done   = items.filter((i) => i.status === "done").length;
+  const active = items.filter(
+    (i) => i.status === "in-progress" || i.status === "waiting"
+  ).length;
 
-// Priority dot colour
-const PRIORITY_DOT: Record<string, string> = {
-  critical: "bg-red",
-  high:     "bg-gold",
-  medium:   "bg-accent",
-  low:      "bg-text3",
-};
-
-// Priority chip classes
-const PRIORITY_CHIP: Record<string, string> = {
-  critical: "bg-red/10 text-red",
-  high:     "bg-gold/10 text-gold",
-  medium:   "bg-accent/10 text-accent",
-  low:      "bg-surface3 text-text3",
-};
-
-const PRIORITY_LABEL: Record<string, string> = {
-  critical: "🔴 Critical",
-  high:     "🟠 High",
-  medium:   "🟡 Medium",
-  low:      "🟢 Low",
-};
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function ProgressBar({ items }: { items: TrackerItem[] }) {
-  const total = items.length;
-  const done  = items.filter((i) => i.status === "done").length;
-  const active = items.filter((i) => i.status === "in-progress").length;
-  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
-  return (
-    <div className="mt-3">
-      <div className="h-0.75 bg-surface3 rounded-full overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{
-            width: `${pct}%`,
-            background: "linear-gradient(90deg, var(--accent), var(--green))",
-          }}
-        />
-      </div>
-      <div className="flex gap-3 mt-1.5 flex-wrap">
-        <span className="text-xs text-text3">
-          <span className="text-text font-medium">{pct}%</span> complete
-        </span>
-        <span className="text-xs text-text3">
-          <span className="text-green font-medium">{done}</span> done
-        </span>
-        {active > 0 && (
-          <span className="text-xs text-text3">
-            <span className="text-accent font-medium">{active}</span> in progress
-          </span>
-        )}
-      </div>
-    </div>
-  );
+  if (total > 0 && done === total)
+    return {
+      label: "Complete",
+      style: "bg-green/10 text-green border-green/20",
+      dot:   "bg-green",
+    };
+  if (done > 0 || active > 0)
+    return {
+      label: "In progress",
+      style: "bg-accent/10 text-accent border-accent/20",
+      dot:   "bg-accent",
+    };
+  return {
+    label: "Coming soon",
+    style: "bg-surface3 text-text3 border-border",
+    dot:   "bg-text3",
+  };
 }
 
-function TaskRow({ item }: { item: TrackerItem }) {
-  const isDone = item.status === "done";
+// ─── Section card ─────────────────────────────────────────────────────────────
+
+function SectionCard({ section }: { section: TrackerSection }) {
+  const total  = section.items.length;
+  const done   = section.items.filter((i) => i.status === "done").length;
+  const active = section.items.filter(
+    (i) => i.status === "in-progress" || i.status === "waiting"
+  ).length;
+  const pct    = total > 0 ? Math.round((done / total) * 100) : 0;
+  const phase  = getSectionPhase(section.items);
+  const icon   = SECTION_ICON[section.id] ?? "📦";
+  const label  = section.publicLabel ?? section.title;
+  const desc   = section.publicDescription ?? "";
+
   return (
-    <li className={`flex items-start gap-3 py-2 px-3 rounded-lg border transition-colors ${
-      isDone
-        ? "border-transparent bg-transparent opacity-50"
-        : "border-border bg-surface2 hover:border-border hover:bg-surface3"
-    }`}>
-      {/* Priority dot */}
-      <span
-        className={`mt-1.75 w-1.5 h-1.5 rounded-full shrink-0 ${
-          item.priority ? PRIORITY_DOT[item.priority] : "bg-transparent"
-        }`}
-      />
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <span className={`text-sm leading-snug ${isDone ? "line-through text-text3" : "text-text"}`}>
-            {item.name}
-          </span>
-          <span className={`text-xs px-2 py-0.5 rounded-md font-medium shrink-0 ${STATUS_BADGE[item.status]}`}>
-            {STATUS_LABEL[item.status]}
-          </span>
-        </div>
-
-        {item.note && (
-          <p className="text-xs text-text3 mt-0.5 leading-relaxed">{item.note}</p>
-        )}
-
-        {/* Meta row: priority chip + due date */}
-        {(item.priority || item.due) && (
-          <div className="flex gap-1.5 mt-1.5 flex-wrap items-center">
-            {item.priority && (
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${PRIORITY_CHIP[item.priority]}`}>
-                {PRIORITY_LABEL[item.priority]}
-              </span>
+    <div className="bg-surface border border-border rounded-2xl p-5 flex flex-col gap-4">
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl leading-none">{icon}</span>
+          <div>
+            <h3 className="font-semibold text-base leading-tight">{label}</h3>
+            {desc && (
+              <p className="text-xs text-text3 mt-0.5 leading-relaxed max-w-xs">
+                {desc}
+              </p>
             )}
-            {item.due && (
-              <span className="text-[10px] text-gold font-mono">
-                Due {item.due}{item.recurring ? ` · every ${item.recurring}` : ""}
+          </div>
+        </div>
+        {/* Phase badge */}
+        <span
+          className={`text-xs px-2.5 py-1 rounded-full border font-medium shrink-0 ${phase.style}`}
+        >
+          {phase.label}
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div>
+        <div className="h-1.5 bg-surface3 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{
+              width: `${pct}%`,
+              background:
+                pct === 100
+                  ? "var(--green)"
+                  : "linear-gradient(90deg, var(--accent), var(--green))",
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between mt-1.5">
+          <div className="flex gap-3">
+            <span className="text-xs text-text3">
+              <span className="text-text font-medium">{done}</span>
+              <span> / {total} milestones</span>
+            </span>
+            {active > 0 && (
+              <span className="text-xs text-text3">
+                <span className="text-accent font-medium">{active}</span> active
               </span>
             )}
           </div>
-        )}
+          <span className="text-xs font-semibold text-text2">{pct}%</span>
+        </div>
       </div>
-    </li>
-  );
-}
-
-function SectionCard({ section }: { section: TrackerSection }) {
-  return (
-    <div className="bg-surface border border-border rounded-2xl overflow-hidden">
-      <div className="px-5 pt-5 pb-4 border-b border-border">
-        <h3 className="font-semibold text-base">{section.title}</h3>
-        <ProgressBar items={section.items} />
-      </div>
-      <ul className="p-3 space-y-1.5">
-        {section.items.map((item) => (
-          <TaskRow key={item.id} item={item} />
-        ))}
-      </ul>
     </div>
   );
 }
@@ -208,36 +176,41 @@ function SectionCard({ section }: { section: TrackerSection }) {
 export default async function TrackerPage() {
   const data = await getTrackerData();
 
-  const allItems  = data?.sections.flatMap((s) => s.items) ?? [];
-  const total     = allItems.length;
-  const done      = allItems.filter((i) => i.status === "done").length;
-  const inProg    = allItems.filter((i) => i.status === "in-progress").length;
-  const waiting   = allItems.filter((i) => i.status === "waiting").length;
-  const blocked   = allItems.filter((i) => i.status === "blocked").length;
+  // Only show app pathway publicly — filter out maintenance
+  const publicSections = (data?.sections ?? []).filter(
+    (s) => s.pathway === "app"
+  );
+
+  const allItems   = publicSections.flatMap((s) => s.items);
+  const total      = allItems.length;
+  const done       = allItems.filter((i) => i.status === "done").length;
+  const inProg     = allItems.filter(
+    (i) => i.status === "in-progress" || i.status === "waiting"
+  ).length;
   const overallPct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  // Ordered pathways: app first, maintenance last
-  const pathwayOrder = ["app", "maintenance"];
-  const pathways = data
-    ? pathwayOrder.filter((p) => data.sections.some((s) => s.pathway === p))
-    : [];
-
-  const PATHWAY_LABEL: Record<string, string> = {
-    app:         "App development",
-    maintenance: "Maintenance",
-  };
+  // Derive an overall phase label
+  const overallPhase =
+    overallPct === 100
+      ? "Complete"
+      : inProg > 0 || done > 0
+      ? "Building"
+      : "Planned";
 
   return (
     <div className="min-h-screen flex flex-col">
       {/* Nav */}
       <nav className="border-b border-border sticky top-0 bg-bg/90 backdrop-blur z-50">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="text-base font-semibold tracking-tight flex items-center gap-2.5">
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+          <Link
+            href="/"
+            className="text-base font-semibold tracking-tight flex items-center gap-2.5"
+          >
             <span className="w-7 h-7 bg-accent rounded-lg flex items-center justify-center text-white text-sm font-bold shrink-0">
               D
             </span>
             Defray
-            <span className="text-text3 font-normal text-sm">build tracker</span>
+            <span className="text-text3 font-normal text-sm">/ build tracker</span>
           </Link>
           <Link
             href="/"
@@ -248,44 +221,20 @@ export default async function TrackerPage() {
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto w-full px-6 py-10 flex-1">
+      <div className="max-w-5xl mx-auto w-full px-6 py-12 flex-1">
 
-        {/* Header + overall stats */}
-        <div className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-text3 mb-3">
-            Overall progress &mdash; last updated {data?.meta.lastUpdated ?? "—"}
+        {/* Page hero */}
+        <div className="mb-10">
+          <p className="text-xs font-semibold uppercase tracking-widest text-text3 mb-2">
+            Development progress
           </p>
-
-          {/* Stat pills */}
-          <div className="flex flex-wrap gap-2.5 mb-3">
-            {[
-              { n: total,   label: "total tasks",  color: "" },
-              { n: done,    label: "done",         color: "text-green" },
-              { n: inProg,  label: "in progress",  color: "text-accent" },
-              { n: waiting, label: "waiting",      color: "text-gold" },
-              { n: blocked, label: "blocked",      color: "text-red" },
-              { n: `${overallPct}%`, label: "complete", color: "" },
-            ].map((s) => (
-              <div
-                key={s.label}
-                className="bg-surface border border-border rounded-full px-4 py-1.5 flex items-center gap-1.5"
-              >
-                <span className={`text-sm font-semibold ${s.color || "text-text"}`}>{s.n}</span>
-                <span className="text-sm text-text3">{s.label}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Overall progress bar */}
-          <div className="h-0.75 bg-surface3 rounded-full overflow-hidden max-w-full">
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${overallPct}%`,
-                background: "linear-gradient(90deg, var(--accent), var(--green))",
-              }}
-            />
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+            We build in public
+          </h1>
+          <p className="text-text2 text-base max-w-lg">
+            Follow along as Defray takes shape — from infrastructure and
+            accounts to the shared card and launch.
+          </p>
         </div>
 
         {!data && (
@@ -297,85 +246,84 @@ export default async function TrackerPage() {
           </div>
         )}
 
-        {/* Pathways */}
-        {data &&
-          pathways.map((pathway) => {
-            const pwSections = data.sections.filter((s) => s.pathway === pathway);
-            const pwItems    = pwSections.flatMap((s) => s.items);
-            const pwDone     = pwItems.filter((i) => i.status === "done").length;
-            const pwPct      = pwItems.length > 0
-              ? Math.round((pwDone / pwItems.length) * 100)
-              : 0;
-
-            return (
-              <div key={pathway} className="mb-12">
-                {/* Pathway header card */}
-                <div className="bg-surface border border-border rounded-2xl p-5 mb-5">
-                  <div className={`text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded inline-block mb-2 ${
-                    pathway === "maintenance"
-                      ? "bg-gold/10 text-gold"
-                      : "bg-accent/10 text-accent"
-                  }`}>
-                    {pathway === "app" ? "Pathway — App" : "Pathway — Maintenance"}
-                  </div>
-                  <h2 className="text-lg font-bold mb-1">{PATHWAY_LABEL[pathway]}</h2>
-                  <p className="text-sm text-text2 mb-3">
-                    {pathway === "app"
-                      ? "Supabase · Expo / React Native · Auth · Groups · Virtual card · Launch"
-                      : "Credential rotation · Dependency audits · Security patches"}
+        {data && (
+          <>
+            {/* Overall progress banner */}
+            <div className="bg-surface border border-border rounded-2xl p-6 mb-8">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <div>
+                  <p className="text-xs text-text3 uppercase tracking-widest font-semibold mb-1">
+                    Overall — last updated {data.meta.lastUpdated}
                   </p>
-                  <div className="h-0.75 bg-surface3 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${pwPct}%`,
-                        background: pathway === "maintenance"
-                          ? "var(--gold)"
-                          : "linear-gradient(90deg, var(--accent), var(--green))",
-                      }}
-                    />
-                  </div>
-                  <div className="flex gap-4 mt-2 flex-wrap">
-                    <span className="text-xs text-text3">
-                      <span className="text-text font-medium">{pwPct}%</span> complete
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl font-bold">{overallPct}%</span>
+                    <span className="text-sm text-text2">complete</span>
+                    <span
+                      className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
+                        overallPhase === "Complete"
+                          ? "bg-green/10 text-green border-green/20"
+                          : overallPhase === "Building"
+                          ? "bg-accent/10 text-accent border-accent/20"
+                          : "bg-surface3 text-text3 border-border"
+                      }`}
+                    >
+                      {overallPhase}
                     </span>
-                    <span className="text-xs text-text3">
-                      <span className="text-green font-medium">{pwDone}</span> done
-                    </span>
-                    {pwItems.filter((i) => i.status === "in-progress").length > 0 && (
-                      <span className="text-xs text-text3">
-                        <span className="text-accent font-medium">
-                          {pwItems.filter((i) => i.status === "in-progress").length}
-                        </span>{" "}
-                        in progress
-                      </span>
-                    )}
-                    {pwItems.filter((i) => i.status === "blocked").length > 0 && (
-                      <span className="text-xs text-text3">
-                        <span className="text-red font-medium">
-                          {pwItems.filter((i) => i.status === "blocked").length}
-                        </span>{" "}
-                        blocked
-                      </span>
-                    )}
                   </div>
                 </div>
 
-                {/* Section cards grid */}
-                <div className="grid sm:grid-cols-2 gap-5">
-                  {pwSections.map((section) => (
-                    <SectionCard key={section.id} section={section} />
+                {/* Summary pills */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { n: done,   label: "done",        color: "text-green" },
+                    { n: inProg, label: "in progress",  color: "text-accent" },
+                    { n: total - done - inProg, label: "upcoming", color: "text-text3" },
+                  ].map((s) => (
+                    <div
+                      key={s.label}
+                      className="bg-surface2 border border-border rounded-xl px-3 py-1.5 flex items-center gap-1.5"
+                    >
+                      <span className={`text-sm font-semibold ${s.color}`}>{s.n}</span>
+                      <span className="text-xs text-text3">{s.label}</span>
+                    </div>
                   ))}
                 </div>
               </div>
-            );
-          })}
+
+              {/* Overall progress bar */}
+              <div className="h-2 bg-surface3 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${overallPct}%`,
+                    background: "linear-gradient(90deg, var(--accent), var(--green))",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Section cards grid */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {publicSections.map((section) => (
+                <SectionCard key={section.id} section={section} />
+              ))}
+            </div>
+
+            {/* Footer note */}
+            <p className="text-xs text-text3 text-center mt-10">
+              Milestones update automatically with each release &middot; v{data.meta.version}
+            </p>
+          </>
+        )}
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-border">
-        <div className="max-w-6xl mx-auto px-6 py-6 text-sm text-text3 text-center">
-          &copy; 2026 Defray &middot; This tracker updates automatically on each release &middot; v{data?.meta.version ?? "—"}
+      <footer className="border-t border-border mt-auto">
+        <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-between flex-wrap gap-4">
+          <span className="text-sm text-text3">&copy; 2026 Defray</span>
+          <Link href="/" className="text-sm text-text2 hover:text-text transition-colors">
+            Back to home &rarr;
+          </Link>
         </div>
       </footer>
     </div>
