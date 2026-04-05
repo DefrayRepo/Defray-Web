@@ -16,7 +16,7 @@ export default function HomePage() {
           </span>
           <Link
             href="/tracker"
-            className="text-sm text-text2 hover:text-text transition-colors"
+            className="shrink-0 bg-accent hover:bg-accent/80 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
           >
             Build tracker &rarr;
           </Link>
@@ -31,12 +31,12 @@ export default function HomePage() {
         </div>
 
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold leading-[1.08] tracking-tight max-w-3xl">
-          The group card that{" "}
-          <span className="text-accent">does the maths</span>
+          The new app that{" "}
+          <span className="text-accent">makes splitting expenses effortless</span>
         </h1>
 
         <p className="text-lg sm:text-xl text-text2 max-w-lg leading-relaxed">
-          One virtual card. Everyone chips in. Every tap is split the moment it
+          One group fund. One virtual card. Everyone chips in. Every tap and transaction is split the moment it
           happens &mdash; no chasing, no spreadsheets, no awkward IOUs at the end of
           the trip.
         </p>
@@ -132,7 +132,7 @@ export default function HomePage() {
           Be first when we launch
         </h2>
         <p className="text-text2 max-w-sm text-sm leading-relaxed">
-          We&apos;re targeting TestFlight in June 2026. Join the waitlist and
+          We&apos;re targeting Early Testing in June 2026. Join the waitlist and
           you&apos;ll be first in line.
         </p>
         <WaitlistForm />
@@ -141,11 +141,8 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-border mt-auto">
         <div className="max-w-5xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-text3">
-          <span>&copy; 2026 Defray. Built in Sydney.</span>
+          <span>&copy; 2026 Defray. Built in Melbourne, Australia.</span>
           <div className="flex gap-5">
-            <Link href="/tracker" className="hover:text-text2 transition-colors">
-              Build tracker
-            </Link>
           </div>
         </div>
       </footer>
@@ -164,15 +161,15 @@ const HOW_IT_WORKS = [
   },
   {
     icon: "💳",
-    title: "One card pays",
+    title: "One Fund, One Card",
     description:
-      "A shared virtual card is issued for the group. Tap it anywhere Mastercard is accepted.",
+      "A shared ground fund paired with a shared virtual card is issued for the group. Tap it anywhere Mastercard is accepted.",
   },
   {
     icon: "✅",
     title: "Everyone's settled",
     description:
-      "Every tap is split live. At the end, our algorithm minimises transfers — most people owe nothing.",
+      "Every transaction is saved and split live. At the end, our app minimises transfer hassles so everyone pays exactly what they owe — no more, no less.",
   },
 ];
 
