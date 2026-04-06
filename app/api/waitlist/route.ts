@@ -70,12 +70,30 @@ export async function POST(request: Request) {
 
   if (insertError) {
     if (insertError.code === "23505") {
-      // Unique constraint — already on waitlist, treat as success
-      return NextResponse.json({ message: "Already on the list." }, { status: 409 });
+      // Unique constraint — already on waitlist. Fetch their position so we
+      // can still show it in the UI (treat as success from the user's POV).
+      const { count } = await serviceClient
+        .from("waitlist")
+        .select("*", { count: "exact", head: true });
+      const position = count ?? null;
+      return NextResponse.json(
+        { message: "Already on the list.", position, alreadySignedUp: true },
+        { status: 200 }
+      );
     }
     console.error("Supabase waitlist insert error:", insertError.message);
     return NextResponse.json({ error: "Could not save email." }, { status: 500 });
   }
 
-  return NextResponse.json({ message: "Added to waitlist." }, { status: 201 });
+  // ── Fetch total count to return the new signup's position ──────────────────
+  // Uses service client so it can bypass RLS for an accurate count.
+  const { count } = await serviceClient
+    .from("waitlist")
+    .select("*", { count: "exact", head: true });
+  const position = count ?? null;
+
+  return NextResponse.json(
+    { message: "Added to waitlist.", position },
+    { status: 201 }
+  );
 }
