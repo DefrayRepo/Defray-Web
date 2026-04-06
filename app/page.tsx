@@ -143,6 +143,8 @@ export default function HomePage() {
         <div className="max-w-5xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-text3">
           <span>&copy; 2026 Defray. Built in Melbourne, Australia.</span>
           <div className="flex gap-5">
+            <Link href="/privacy" className="hover:text-text transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-text transition-colors">Terms</Link>
           </div>
         </div>
       </footer>
